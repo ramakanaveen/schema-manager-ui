@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { fetchSchema } from '../services/schemaService';
 import AppHeader from '../components/layout/AppHeader';
-import Sidebar from '../components/layout/Sidebar';
 import SchemaEditor from '../components/SchemaManager/SchemaEditor';
 import JSONViewer from '../components/SchemaManager/JSONViewer';
 import VersionHistory from '../components/SchemaManager/VersionHistory';
@@ -116,7 +115,7 @@ const SchemaDetail = () => {
         
         <div className="schema-tab-content">
           {activeTab === 'tables' && (
-            <SchemaEditor schema={schema} onUpdate={() => {}} />
+            <SchemaEditor schema={schema} />
           )}
           
           {activeTab === 'json' && (
