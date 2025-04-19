@@ -1,0 +1,52 @@
+/* src/components/SchemaManager/VersionHistory.css */
+.version-history {
+    padding: 1rem;
+  }
+  
+  .versions-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .versions-table th,
+  .versions-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  
+  .versions-table th {
+    font-weight: 600;
+    color: #555;
+    background-color: #f5f5f5;
+  }
+  
+  .version-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .status-badge.active {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+  }
+  
+  .status-badge.draft {
+    background-color: #e3f2fd;
+    color: #0277bd;
+  }
+  
+  .status-badge.deprecated {
+    background-color: #fafafa;
+    color: #757575;
+  }

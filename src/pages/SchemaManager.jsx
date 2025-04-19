@@ -1,64 +1,46 @@
 // src/pages/SchemaManager.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SchemaList from '../components/SchemaManager/SchemaList';
+import { fetchGroups, fetchSchemas } from '../services/schemaService';
+
+// Import the Dashboard component
+import Dashboard from '../components/SchemaManager/Dashboard';
+
+// Import layout components (you'll need to implement these)
 import AppHeader from '../components/layout/AppHeader';
 import Sidebar from '../components/layout/Sidebar';
-import { fetchGroups, fetchSchemas } from '../services/schemaService';
-import { PlusIcon, FolderIcon } from 'lucide-react';
 
 const SchemaManager = () => {
   const [groups, setGroups] = useState([]);
-  const [schemas, setSchemas] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedGroup, setSelectedGroup] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadGroups = async () => {
       setLoading(true);
       try {
-        // Load groups and schemas
-        const groupsData = await fetchGroups();
-        setGroups(groupsData.groups);
+        const response = await fetchGroups();
+        setGroups(response.groups || []);
         
-        // If no group is selected, use the first one
-        const groupId = selectedGroup?.id || (groupsData.groups[0]?.id || null);
-        
-        if (groupId) {
-          const schemasData = await fetchSchemas(groupId);
-          setSchemas(schemasData.schemas);
-          setSelectedGroup(groupsData.groups.find(g => g.id === groupId));
-        } else {
-          setSchemas([]);
+        // If groups were loaded and none is selected, select the first one
+        if (response.groups && response.groups.length > 0 && !selectedGroup) {
+          setSelectedGroup(response.groups[0]);
         }
       } catch (err) {
-        setError(err.message);
-        console.error('Error loading data:', err);
+        setError(err.message || 'Failed to load groups');
+        console.error('Error loading groups:', err);
       } finally {
         setLoading(false);
       }
     };
     
-    loadData();
-  }, [selectedGroup?.id]);
+    loadGroups();
+  }, [selectedGroup]);
   
   const handleGroupChange = (group) => {
     setSelectedGroup(group);
-  };
-  
-  const handleCreateSchema = () => {
-    if (!selectedGroup) {
-      alert('Please select a group first');
-      return;
-    }
-    
-    navigate(`/schema-manager/create?groupId=${selectedGroup.id}`);
-  };
-  
-  const handleSchemaClick = (schema) => {
-    navigate(`/schema-manager/schema/${schema.id}`);
   };
   
   const handleCreateGroup = () => {
@@ -74,32 +56,10 @@ const SchemaManager = () => {
           selectedGroup={selectedGroup}
           onGroupChange={handleGroupChange}
           onCreateGroup={handleCreateGroup}
+          loading={loading}
         />
         <div className="schema-content">
-          <div className="content-header">
-            <h2>{selectedGroup ? selectedGroup.name : 'All Schemas'}</h2>
-            <div className="header-actions">
-              <button 
-                className="btn btn-primary" 
-                onClick={handleCreateSchema}
-                disabled={!selectedGroup}
-              >
-                <PlusIcon size={16} />
-                <span>Create Schema</span>
-              </button>
-            </div>
-          </div>
-          
-          {loading ? (
-            <div className="loading-state">Loading schemas...</div>
-          ) : error ? (
-            <div className="error-state">Error: {error}</div>
-          ) : (
-            <SchemaList 
-              schemas={schemas} 
-              onSchemaClick={handleSchemaClick}
-            />
-          )}
+          <Dashboard groupId={selectedGroup?.id} />
         </div>
       </div>
     </div>

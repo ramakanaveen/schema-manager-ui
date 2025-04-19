@@ -1,0 +1,79 @@
+/* src/pages/SchemaDetail.css */
+.schema-detail-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  
+  .schema-detail-content {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+  }
+  
+  .schema-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .schema-detail-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .schema-status {
+    margin-left: auto;
+  }
+  
+  .schema-tabs {
+    display: flex;
+    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: 1.5rem;
+  }
+  
+  .tab-button {
+    padding: 0.75rem 1.25rem;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .tab-button:hover {
+    color: #0277bd;
+  }
+  
+  .tab-button.active {
+    color: #0277bd;
+    border-bottom-color: #0277bd;
+  }
+  
+  .schema-tab-content {
+    background-color: white;
+    border-radius: 0.5rem;
+    border: 1px solid #e0e0e0;
+    min-height: 400px;
+  }
+  
+  .loading-state, .error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+    gap: 1rem;
+    font-size: 1.125rem;
+    color: #555;
+  }
+  
+  .error-state {
+    color: #c62828;
+  }

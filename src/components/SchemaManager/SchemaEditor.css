@@ -1,0 +1,90 @@
+/* src/components/SchemaManager/SchemaEditor.css */
+.schema-editor {
+    display: flex;
+    height: 100%;
+    min-height: 500px;
+  }
+  
+  .schema-editor-sidebar {
+    width: 250px;
+    border-right: 1px solid #e0e0e0;
+    padding: 1rem;
+  }
+  
+  .tables-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .tables-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+  
+  .tables-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .table-item {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    margin-bottom: 0.25rem;
+  }
+  
+  .table-item:hover {
+    background-color: #f5f5f5;
+  }
+  
+  .table-item.active {
+    background-color: #e3f2fd;
+    color: #0277bd;
+    font-weight: 500;
+  }
+  
+  .empty-tables {
+    color: #777;
+    padding: 1rem 0;
+    text-align: center;
+    font-style: italic;
+  }
+  
+  .schema-editor-content {
+    flex: 1;
+    padding: 1.5rem;
+  }
+  
+  .no-table-selected {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 1rem;
+    color: #666;
+  }
+  
+  .table-editor h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #333;
+  }
+  
+  .placeholder-message {
+    color: #777;
+    font-style: italic;
+  }

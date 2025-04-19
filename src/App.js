@@ -1,10 +1,11 @@
+// src/App.js - Fixed version
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 
-// Import pages (to be created)
+// Import pages correctly
 import SchemaManager from './pages/SchemaManager';
-import SchemaDetail from './pages/SchemaDetail';
+import SchemaDetail from './pages/SchemaDetail'; 
 import CreateSchema from './pages/CreateSchema';
 import GroupManagement from './pages/GroupManagement';
 

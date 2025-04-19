@@ -1,0 +1,152 @@
+/* src/components/SchemaManager/AIAssistant.css */
+.ai-assistant {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .btn-ai.btn-sm {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    background-color: #f0f7ff;
+    color: #0277bd;
+    border: 1px solid #bbdefb;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .btn-ai.btn-sm:hover {
+    background-color: #e3f2fd;
+  }
+  
+  .btn-ai.generating {
+    opacity: 0.7;
+  }
+  
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .spinner {
+    animation: spin 1.5s linear infinite;
+  }
+  
+  .ai-error {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background-color: #ffebee;
+    color: #c62828;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  
+  .suggestions-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 0.5rem;
+    width: 300px;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    overflow: hidden;
+    border: 1px solid #e0e0e0;
+  }
+  
+  .suggestions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: #f5f5f5;
+  }
+  
+  .suggestions-header h4 {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #333;
+  }
+  
+  .close-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+  }
+  
+  .close-button:hover {
+    color: #333;
+  }
+  
+  .suggestions-list {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  
+  .suggestion-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .suggestion-item:hover {
+    background-color: #f9f9f9;
+  }
+  
+  .suggestion-item:last-child {
+    border-bottom: none;
+  }
+  
+  .suggestion-content {
+    flex: 1;
+    font-size: 0.875rem;
+    color: #333;
+    line-height: 1.5;
+  }
+  
+  .select-button {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    border: none;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    margin-left: 0.5rem;
+    transition: background-color 0.2s;
+  }
+  
+  .select-button:hover {
+    background-color: #c8e6c9;
+  }

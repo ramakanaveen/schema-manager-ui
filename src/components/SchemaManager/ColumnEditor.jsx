@@ -1,13 +1,16 @@
 // src/components/SchemaManager/ColumnEditor.jsx
 import React, { useState } from 'react';
+import { Trash2Icon, EditIcon, SaveIcon, XIcon } from 'lucide-react';
 import AIAssistant from './AIAssistant';
-import { Trash2Icon, EditIcon, HelpCircleIcon } from 'lucide-react';
+import './ColumnEditor.css';
 
 const ColumnEditor = ({ column, onUpdate, onDelete, tableName }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(column.name);
-  const [type, setType] = useState(column.type || column.kdb_type || 'symbol');
-  const [description, setDescription] = useState(column.description || column.column_desc || '');
+  const [type, setType] = useState(column.type || 'symbol');
+  const [description, setDescription] = useState(column.description || '');
+  const [isRequired, setIsRequired] = useState(column.required || false);
+  const [isKey, setIsKey] = useState(column.key || false);
   
   // Available KDB types
   const kdbTypes = [
@@ -39,9 +42,22 @@ const ColumnEditor = ({ column, onUpdate, onDelete, tableName }) => {
       ...column,
       name,
       type,
-      description
+      description,
+      required: isRequired,
+      key: isKey
     });
     
+    setIsEditing(false);
+  };
+  
+  // Handle cancel
+  const handleCancel = () => {
+    // Reset to original values
+    setName(column.name);
+    setType(column.type || 'symbol');
+    setDescription(column.description || '');
+    setIsRequired(column.required || false);
+    setIsKey(column.key || false);
     setIsEditing(false);
   };
   
@@ -58,6 +74,7 @@ const ColumnEditor = ({ column, onUpdate, onDelete, tableName }) => {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            placeholder="Column name"
             autoFocus
           />
         </div>
@@ -92,18 +109,40 @@ const ColumnEditor = ({ column, onUpdate, onDelete, tableName }) => {
           </div>
         </div>
         
+        <div className="col-options">
+          <label className="option-checkbox">
+            <input
+              type="checkbox"
+              checked={isRequired}
+              onChange={(e) => setIsRequired(e.target.checked)}
+            />
+            <span>Required</span>
+          </label>
+          
+          <label className="option-checkbox">
+            <input
+              type="checkbox"
+              checked={isKey}
+              onChange={(e) => setIsKey(e.target.checked)}
+            />
+            <span>Key</span>
+          </label>
+        </div>
+        
         <div className="col-actions">
           <button 
             className="btn btn-sm btn-success"
             onClick={handleSave}
+            title="Save changes"
           >
-            Save
+            <SaveIcon size={14} />
           </button>
           <button 
             className="btn btn-sm btn-secondary"
-            onClick={() => setIsEditing(false)}
+            onClick={handleCancel}
+            title="Cancel"
           >
-            Cancel
+            <XIcon size={14} />
           </button>
         </div>
       </div>
@@ -113,8 +152,14 @@ const ColumnEditor = ({ column, onUpdate, onDelete, tableName }) => {
   return (
     <div className="column-editor">
       <div className="col-name">{column.name}</div>
-      <div className="col-type">{column.type || column.kdb_type || 'symbol'}</div>
-      <div className="col-description">{column.description || column.column_desc || '-'}</div>
+      <div className="col-type">{column.type || 'symbol'}</div>
+      <div className="col-description">
+        {column.description || <span className="no-description">No description</span>}
+      </div>
+      <div className="col-options">
+        {column.required && <span className="option-badge required">Required</span>}
+        {column.key && <span className="option-badge key">Key</span>}
+      </div>
       <div className="col-actions">
         <button 
           className="btn btn-icon"
