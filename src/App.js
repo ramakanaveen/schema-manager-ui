@@ -1,24 +1,26 @@
-import logo from './logo.svg';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
+
+// Import pages (to be created)
+import SchemaManager from './pages/SchemaManager';
+import SchemaDetail from './pages/SchemaDetail';
+import CreateSchema from './pages/CreateSchema';
+import GroupManagement from './pages/GroupManagement';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <div className="App">
+        <Routes>
+          <Route path="/" element={<Navigate to="/schema-manager" />} />
+          <Route path="/schema-manager" element={<SchemaManager />} />
+          <Route path="/schema-manager/groups/create" element={<GroupManagement />} />
+          <Route path="/schema-manager/create" element={<CreateSchema />} />
+          <Route path="/schema-manager/schema/:schemaId" element={<SchemaDetail />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
