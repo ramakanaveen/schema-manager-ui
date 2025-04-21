@@ -5,24 +5,35 @@ import JSONViewer from './JSONViewer';
 import { fetchSchemaJson, updateSchemaJson } from '../../services/schemaService';
 import './SchemaEditor.css';
 
-const SchemaEditor = ({ schema }) => {
+const SchemaEditor = ({ schema, schemaJson: initialSchemaJson, onUpdate }) => {
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [schemaJson, setSchemaJson] = useState(null);
-  const [refreshKey, setRefreshKey] = useState(0); // Add refresh key for forcing re-render
- 
+  
+  // Initialize schemaJson state when initialSchemaJson changes
+  useEffect(() => {
+    if (initialSchemaJson) {
+      setSchemaJson(initialSchemaJson);
+    }
+  }, [initialSchemaJson]);
+  
   useEffect(() => {
     const loadSchemaData = async () => {
       if (!schema) return;
       
       setLoading(true);
       try {
-        // Fetch schema JSON
-        const json = await fetchSchemaJson(schema.id);
-        setSchemaJson(json);
+        // If schemaJson is provided, use it, otherwise fetch it
+        const json = schemaJson || initialSchemaJson || await fetchSchemaJson(schema.id);
+        
+        // Make sure we set the schemaJson state if it wasn't already set
+        if (!schemaJson) {
+          setSchemaJson(json);
+        }
         
         // Extract tables from the schema JSON in spot.json format
         let tablesList = [];
@@ -155,7 +166,7 @@ const SchemaEditor = ({ schema }) => {
     };
     
     loadSchemaData();
-  }, [schema, refreshKey]); // Add refreshKey to dependencies
+  }, [schema, schemaJson, initialSchemaJson, refreshKey, selectedTable]);
 
   const handleTableSelect = (table) => {
     setSelectedTable(table);
@@ -187,7 +198,7 @@ const SchemaEditor = ({ schema }) => {
     setTables(updatedTables);
     
     // Update schemaJson in the same format
-    const updatedJson = { ...schemaJson };
+    const updatedJson = { ...(schemaJson || {}) };
     
     // Check if we have the spot.json format
     if (updatedJson.group && updatedJson.schemas && updatedJson.schemas.length > 0) {
@@ -227,6 +238,11 @@ const SchemaEditor = ({ schema }) => {
     
     setSchemaJson(updatedJson);
     
+    // Notify parent component of the update
+    if (onUpdate) {
+      onUpdate(updatedJson);
+    }
+    
     // Select the new table
     setSelectedTable(newTable);
   };
@@ -250,6 +266,11 @@ const SchemaEditor = ({ schema }) => {
     // Update the original reference directly
     originalRef.kdb_table_name = updatedTable.name;
     originalRef.description = updatedTable.description;
+    
+    // Update examples if they exist
+    if (updatedTable.examples) {
+      originalRef.examples = updatedTable.examples;
+    }
     
     // Update columns in the original format
     originalRef.columns = updatedTable.columns.map(column => ({
@@ -278,8 +299,10 @@ const SchemaEditor = ({ schema }) => {
       });
     }
     
-    // No need to separately update schemaJson since we've updated the
-    // referenced object directly, which is part of the schemaJson structure
+    // Notify parent component of the update
+    if (onUpdate && schemaJson) {
+      onUpdate(schemaJson);
+    }
   };
   
   const handleSaveSchema = async (createVersion = false) => {

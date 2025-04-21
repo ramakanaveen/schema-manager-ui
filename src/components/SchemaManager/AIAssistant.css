@@ -59,14 +59,12 @@
   
   .suggestions-dropdown {
     position: absolute;
-    top: 100%;
-    right: 0;
     margin-top: 0.5rem;
-    width: 300px;
+    width: 500px;
     background-color: white;
     border-radius: 0.5rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    z-index: 10;
+    z-index: 1000; /* Increase z-index to ensure it appears above other elements */
     overflow: hidden;
     border: 1px solid #e0e0e0;
   }

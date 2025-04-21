@@ -32,7 +32,7 @@ const Sidebar = ({ groups, selectedGroup, onGroupChange, onCreateGroup, loading 
             onClick={onCreateGroup}
             title="Create new group"
           >
-            <PlusIcon size={16} />
+           <span>➕ </span>
           </button>
         </div>
         

@@ -1,10 +1,10 @@
 // src/components/SchemaManager/TableEditor.jsx
 import React, { useState, useEffect } from 'react';
-import { PencilIcon, Trash2Icon, PlusIcon } from 'lucide-react';
 import AIAssistant from './AIAssistant';
 import './TableEditor.css';
+import ExampleEditor from './ExampleEditor';
 
-const TableEditor = ({ table, onUpdate }) => {
+const TableEditor = ({ table, onUpdate, allTables }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [tableName, setTableName] = useState(table?.name || 'New Table');
@@ -62,6 +62,19 @@ const TableEditor = ({ table, onUpdate }) => {
         description: col.description || col.column_desc || '',
       }))
     };
+  };
+
+  const handleUpdateExamples = (updatedExamples) => {
+    // Update the table with new examples
+    if (table) {
+      const updatedTable = {
+        ...table,
+        examples: updatedExamples
+      };
+      
+      // Update the table in the parent component
+      onUpdate(updatedTable);
+    }
   };
 
   // Update table name
@@ -494,6 +507,18 @@ const TableEditor = ({ table, onUpdate }) => {
             </div>
           </div>
         )}
+        <div className="examples-section">
+        <ExampleEditor 
+        examples={table?.examples || []}
+        onUpdate={(updatedExamples) => {
+          const updatedTable = {
+            ...table,
+            examples: updatedExamples
+          };
+          onUpdate(updatedTable);
+        }}
+       />
+    </div>
       </div>
     </div>
   );

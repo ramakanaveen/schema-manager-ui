@@ -5,8 +5,7 @@ import { fetchGroups, fetchSchemas } from '../services/schemaService';
 
 // Import the Dashboard component
 import Dashboard from '../components/SchemaManager/Dashboard';
-
-// Import layout components (you'll need to implement these)
+import GroupCreationWizard from '../components/SchemaManager/GroupCreationWizard';
 import AppHeader from '../components/layout/AppHeader';
 import Sidebar from '../components/layout/Sidebar';
 
@@ -15,6 +14,7 @@ const SchemaManager = () => {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showCreateGroupWizard, setShowCreateGroupWizard] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -44,9 +44,29 @@ const SchemaManager = () => {
   };
   
   const handleCreateGroup = () => {
-    navigate('/schema-manager/groups/create');
+    setShowCreateGroupWizard(true);
+  };
+  
+  const handleCloseWizard = () => {
+    setShowCreateGroupWizard(false);
+    // Refresh groups after a new one is created
+    loadGroups();
   };
 
+  const loadGroups = async () => {
+    try {
+      const response = await fetchGroups();
+      setGroups(response.groups || []);
+      
+      // If a new group was created, select it
+      if (response.groups && response.groups.length > 0 && 
+          (!selectedGroup || !response.groups.find(g => g.id === selectedGroup.id))) {
+        setSelectedGroup(response.groups[0]);
+      }
+    } catch (err) {
+      console.error('Error reloading groups:', err);
+    }
+  };
   return (
     <div className="schema-manager-page">
       <AppHeader title="Schema Manager" />
@@ -62,6 +82,9 @@ const SchemaManager = () => {
           <Dashboard groupId={selectedGroup?.id} />
         </div>
       </div>
+      {showCreateGroupWizard && (
+        <GroupCreationWizard onClose={handleCloseWizard} />
+      )}
     </div>
   );
 };
