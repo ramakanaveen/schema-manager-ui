@@ -1,10 +1,10 @@
 // src/components/SchemaManager/AIAssistant.jsx
 import React, { useState } from 'react';
 import { SparklesIcon, LoaderIcon, CheckIcon, XIcon } from 'lucide-react';
-import { generateDescriptions } from '../../services/aiService';
+import { generateDescriptionsWithFallback } from '../../services/aiService';
 import './AIAssistant.css';
 
-const AIAssistant = ({ type, name, tableName, onSelectDescription }) => {
+const AIAssistant = ({ type, name, tableName, tableContext, onSelectDescription }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [error, setError] = useState(null);
@@ -15,11 +15,23 @@ const AIAssistant = ({ type, name, tableName, onSelectDescription }) => {
     setError(null);
     
     try {
-      const data = await generateDescriptions({
-        [type === 'column' ? 'column_name' : 'table_name']: name,
-        ...(type === 'column' ? { table_name: tableName } : {}),
+      // Prepare the request with full table context
+      const requestData = {
+        table_name: tableName,
         count: 3
-      });
+      };
+      
+      // Add table context if available
+      if (tableContext) {
+        requestData.table_context = tableContext;
+      }
+      
+      // For column-specific descriptions, add column name
+      if (type === 'column') {
+        requestData.column_name = name;
+      }
+      
+      const data = await generateDescriptionsWithFallback(requestData);
       
       setSuggestions(data.descriptions || []);
       setShowSuggestions(true);

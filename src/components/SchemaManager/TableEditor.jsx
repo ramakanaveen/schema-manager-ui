@@ -1,6 +1,7 @@
 // src/components/SchemaManager/TableEditor.jsx
 import React, { useState, useEffect } from 'react';
 import { PencilIcon, Trash2Icon, PlusIcon } from 'lucide-react';
+import AIAssistant from './AIAssistant';
 import './TableEditor.css';
 
 const TableEditor = ({ table, onUpdate }) => {
@@ -49,6 +50,20 @@ const TableEditor = ({ table, onUpdate }) => {
     { value: 'timespan', label: 'Timespan (n)' }
   ];
 
+  // Helper function to create table context for AI
+  const buildTableContext = () => {
+    return {
+      name: tableName,
+      description: tableDescription || '',
+      columns: columns.map(col => ({
+        name: col.name,
+        type: col.type,
+        kdb_type: col.kdb_type || col.type,
+        description: col.description || col.column_desc || '',
+      }))
+    };
+  };
+
   // Update table name
   const handleNameUpdate = () => {
     if (tableName && tableName !== table?.name) {
@@ -59,6 +74,24 @@ const TableEditor = ({ table, onUpdate }) => {
       onUpdate(updatedTable);
     }
     setIsEditingName(false);
+  };
+
+  // Handle AI-generated table description
+  const handleAITableDescription = (selectedDescription) => {
+    setTableDescription(selectedDescription);
+    // Auto-save if we were already in edit mode
+    if (isEditingDescription) {
+      setTimeout(() => {
+        if (selectedDescription !== table?.description) {
+          const updatedTable = { 
+            ...table, 
+            description: selectedDescription 
+          };
+          onUpdate(updatedTable);
+        }
+        setIsEditingDescription(false);
+      }, 100);
+    }
   };
 
   // Update table description
@@ -109,9 +142,51 @@ const TableEditor = ({ table, onUpdate }) => {
   const handleEditColumn = (columnId) => {
     const columnToEdit = columns.find(c => c.id === columnId);
     if (columnToEdit) {
+      console.log("Starting edit for column:", columnToEdit);
+      console.log("Column type:", columnToEdit.type, "KDB type:", columnToEdit.kdb_type);
+      
+      // Create a properly formatted newColumn with the correct type
+      const editColumn = {
+        ...columnToEdit,
+        // Ensure type is set correctly, prioritizing the visual type over kdb_type
+        type: columnToEdit.type || (columnToEdit.kdb_type ? mapKdbTypeToVisualType(columnToEdit.kdb_type) : 'symbol')
+      };
+      
+      console.log("Setting newColumn to:", editColumn);
       setEditingColumnId(columnId);
-      setNewColumn({ ...columnToEdit });
+      setNewColumn(editColumn);
     }
+  };
+  
+  // Helper function to map KDB type codes to visual types
+  const mapKdbTypeToVisualType = (kdbType) => {
+    // Map single-character KDB type codes to their corresponding visual types
+    const typeMap = {
+      'c': 'char',
+      's': 'symbol',
+      'b': 'boolean',
+      'x': 'byte',
+      'h': 'short',
+      'i': 'int',
+      'j': 'long',
+      'e': 'real',
+      'f': 'float',
+      't': 'time',
+      'u': 'minute',
+      'v': 'second',
+      'p': 'timestamp',
+      'm': 'month',
+      'd': 'date',
+      'z': 'datetime',
+      'n': 'timespan'
+    };
+    
+    return typeMap[kdbType] || 'symbol'; // Default to symbol if mapping not found
+  };
+  
+  // Handle AI-generated column description
+  const handleAIColumnDescription = (selectedDescription) => {
+    setNewColumn({...newColumn, description: selectedDescription});
   };
 
   // Update column
@@ -119,9 +194,16 @@ const TableEditor = ({ table, onUpdate }) => {
     if (!newColumn.name.trim() || !editingColumnId) {
       return;
     }
-
+  
     const updatedColumns = columns.map(col => 
-      col.id === editingColumnId ? { ...newColumn, id: col.id } : col
+      col.id === editingColumnId ? { 
+        ...col,  // Keep original properties
+        ...newColumn, // Apply updates
+        id: col.id,
+        // Ensure these critical properties are preserved properly:
+        type: newColumn.type,
+        kdb_type: newColumn.type // Also update kdb_type to match
+      } : col
     );
     
     setColumns(updatedColumns);
@@ -205,14 +287,22 @@ const TableEditor = ({ table, onUpdate }) => {
       <div className="table-description">
         {isEditingDescription ? (
           <div className="description-edit">
-            <textarea
-              value={tableDescription}
-              onChange={(e) => setTableDescription(e.target.value)}
-              onBlur={handleDescriptionUpdate}
-              rows={3}
-              placeholder="Enter table description..."
-              autoFocus
-            />
+            <div className="description-field">
+              <textarea
+                value={tableDescription}
+                onChange={(e) => setTableDescription(e.target.value)}
+                rows={3}
+                placeholder="Enter table description..."
+                autoFocus
+              />
+              <AIAssistant
+                type="table"
+                name={tableName}
+                tableName={tableName}
+                tableContext={buildTableContext()}
+                onSelectDescription={handleAITableDescription}
+              />
+            </div>
             <button 
               className="btn btn-sm btn-primary"
               onClick={handleDescriptionUpdate}
@@ -308,7 +398,9 @@ const TableEditor = ({ table, onUpdate }) => {
         {(isAddingColumn || editingColumnId) && (
           <div className="add-column-form">
             <h4>{editingColumnId ? 'Edit Column' : 'Add New Column'}</h4>
-            
+            {/* Debug output */}
+            {console.log("Rendering form with newColumn:", newColumn)}
+            {console.log("newColumn.type:", newColumn.type)}
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="column-name">Name*</label>
@@ -326,27 +418,41 @@ const TableEditor = ({ table, onUpdate }) => {
                 <label htmlFor="column-type">Type*</label>
                 <select
                   id="column-type"
-                  value={newColumn.type}
-                  onChange={(e) => setNewColumn({...newColumn, type: e.target.value})}
+                  value={columnTypes.find(opt => 
+                    opt.value.toLowerCase() === (newColumn.type || '').toLowerCase()
+                  )?.value || 'symbol'}
+                  onChange={(e) => {
+                    console.log(`Type changed to: ${e.target.value}`);
+                    setNewColumn({...newColumn, type: e.target.value})}
+                  }
                 >
                   {columnTypes.map(type => (
                     <option key={type.value} value={type.value}>
                       {type.label}
                     </option>
-                  ))}
+                  ))} 
                 </select>
               </div>
             </div>
             
             <div className="form-group">
               <label htmlFor="column-description">Description</label>
-              <input
-                id="column-description"
-                type="text"
-                value={newColumn.description}
-                onChange={(e) => setNewColumn({...newColumn, description: e.target.value})}
-                placeholder="Column description"
-              />
+              <div className="description-field">
+                <input
+                  id="column-description"
+                  type="text"
+                  value={newColumn.description}
+                  onChange={(e) => setNewColumn({...newColumn, description: e.target.value})}
+                  placeholder="Column description"
+                />
+                <AIAssistant
+                  type="column"
+                  name={newColumn.name}
+                  tableName={tableName}
+                  tableContext={buildTableContext()}
+                  onSelectDescription={handleAIColumnDescription}
+                />
+              </div>
             </div>
             
             <div className="form-row column-options">

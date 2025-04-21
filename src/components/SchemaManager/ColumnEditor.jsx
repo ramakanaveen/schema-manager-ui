@@ -1,19 +1,24 @@
 // src/components/SchemaManager/ColumnEditor.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2Icon, EditIcon, SaveIcon, XIcon } from 'lucide-react';
 import AIAssistant from './AIAssistant';
 import './ColumnEditor.css';
 
 const ColumnEditor = ({ column, onUpdate, onDelete, tableName }) => {
+  // Debug log the incoming column data
+  console.log("Column being edited:", column);
+  console.log("Column type:", column.type, "KDB type:", column.kdb_type);
+
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(column.name);
-  const [type, setType] = useState(column.type || 'symbol');
-  const [description, setDescription] = useState(column.description || '');
-  const [isRequired, setIsRequired] = useState(column.required || false);
-  const [isKey, setIsKey] = useState(column.key || false);
+  const [name, setName] = useState('');
+  const [type, setType] = useState('');
+  const [description, setDescription] = useState('');
+  const [isRequired, setIsRequired] = useState(false);
+  const [isKey, setIsKey] = useState(false);
   
   // Available KDB types
   const kdbTypes = [
+    { value: 'date', label: 'Date (d)' },  // Move date to the top for testing
     { value: 'symbol', label: 'Symbol (s)' },
     { value: 'char', label: 'Char (c)' },
     { value: 'string', label: 'String' },
@@ -29,35 +34,72 @@ const ColumnEditor = ({ column, onUpdate, onDelete, tableName }) => {
     { value: 'second', label: 'Second (v)' },
     { value: 'timestamp', label: 'Timestamp (p)' },
     { value: 'month', label: 'Month (m)' },
-    { value: 'date', label: 'Date (d)' },
     { value: 'datetime', label: 'Datetime (z)' },
     { value: 'timespan', label: 'Timespan (n)' }
   ];
+
+  // Initialize form data when the component mounts
+  useEffect(() => {
+    if (column) {
+      // Determine the column's type, with clear debug output
+      let determinedType = 'symbol'; // Default
+      
+      if (column.type) {
+        determinedType = column.type;
+        console.log(`Using column.type: ${determinedType}`);
+      } else if (column.kdb_type) {
+        determinedType = column.kdb_type;
+        console.log(`Using column.kdb_type: ${determinedType}`);
+      }
+      
+      setName(column.name || '');
+      setType(determinedType);
+      setDescription(column.description || column.column_desc || '');
+      setIsRequired(column.required || false);
+      setIsKey(column.key || false);
+      
+      console.log(`Initialized form with name=${column.name}, type=${determinedType}`);
+    }
+  }, [column]);
+  
+  // Reset form data when entering edit mode
+  useEffect(() => {
+    if (isEditing && column) {
+      // Determine the column's type again when entering edit mode
+      let determinedType = column.type || column.kdb_type || 'symbol';
+      
+      setName(column.name || '');
+      setType(determinedType);
+      setDescription(column.description || column.column_desc || '');
+      setIsRequired(column.required || false);
+      setIsKey(column.key || false);
+      
+      console.log(`Entering edit mode with type=${determinedType}`);
+    }
+  }, [isEditing, column]);
   
   // Handle save
   const handleSave = () => {
     if (!name) return;
     
-    onUpdate({
+    const updatedColumn = {
       ...column,
       name,
       type,
+      kdb_type: type, // Ensure kdb_type is also updated
       description,
       required: isRequired,
       key: isKey
-    });
+    };
     
+    console.log("Saving updated column:", updatedColumn);
+    onUpdate(updatedColumn);
     setIsEditing(false);
   };
   
   // Handle cancel
   const handleCancel = () => {
-    // Reset to original values
-    setName(column.name);
-    setType(column.type || 'symbol');
-    setDescription(column.description || '');
-    setIsRequired(column.required || false);
-    setIsKey(column.key || false);
+    console.log("Canceling edit");
     setIsEditing(false);
   };
   
@@ -67,6 +109,10 @@ const ColumnEditor = ({ column, onUpdate, onDelete, tableName }) => {
   };
   
   if (isEditing) {
+    // Debug log current state when rendering edit form
+    console.log(`Rendering edit form with type=${type}`);
+    console.log(`Available types:`, kdbTypes.map(t => t.value));
+    
     return (
       <div className="column-editor editing">
         <div className="col-name">
@@ -82,7 +128,10 @@ const ColumnEditor = ({ column, onUpdate, onDelete, tableName }) => {
         <div className="col-type">
           <select 
             value={type}
-            onChange={(e) => setType(e.target.value)}
+            onChange={(e) => {
+              console.log(`Type changed to: ${e.target.value}`);
+              setType(e.target.value);
+            }}
           >
             {kdbTypes.map(option => (
               <option key={option.value} value={option.value}>
@@ -152,9 +201,9 @@ const ColumnEditor = ({ column, onUpdate, onDelete, tableName }) => {
   return (
     <div className="column-editor">
       <div className="col-name">{column.name}</div>
-      <div className="col-type">{column.type || 'symbol'}</div>
+      <div className="col-type">{column.type || column.kdb_type || 'symbol'}</div>
       <div className="col-description">
-        {column.description || <span className="no-description">No description</span>}
+        {column.description || column.column_desc || <span className="no-description">No description</span>}
       </div>
       <div className="col-options">
         {column.required && <span className="option-badge required">Required</span>}
@@ -163,7 +212,10 @@ const ColumnEditor = ({ column, onUpdate, onDelete, tableName }) => {
       <div className="col-actions">
         <button 
           className="btn btn-icon"
-          onClick={() => setIsEditing(true)}
+          onClick={() => {
+            console.log("Starting edit for column:", column.name);
+            setIsEditing(true);
+          }}
           title="Edit column"
         >
           <EditIcon size={16} />
@@ -179,5 +231,4 @@ const ColumnEditor = ({ column, onUpdate, onDelete, tableName }) => {
     </div>
   );
 };
-
 export default ColumnEditor;

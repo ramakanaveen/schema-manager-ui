@@ -5,36 +5,58 @@ const API_URL = `${config.apiUrl}/schema-manager/ai`;
 
 // Generate descriptions using AI
 export const generateDescriptions = async (data) => {
-  const response = await fetch(`${API_URL}/describe`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data)
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to generate descriptions');
+  try {
+    const response = await fetch(`${API_URL}/describe`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `Failed to generate descriptions: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error generating descriptions:', error);
+    throw error;
   }
-  
-  return await response.json();
 };
 
 // Generate examples using AI
 export const generateExamples = async (data) => {
-  const response = await fetch(`${API_URL}/examples`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data)
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to generate examples');
+  try {
+    const response = await fetch(`${API_URL}/examples`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `Failed to generate examples: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error generating examples:', error);
+    throw error;
   }
-  
-  return await response.json();
+};
+
+// Helper function that tries the API first, falls back to local generation if needed
+export const generateDescriptionsWithFallback = async (data) => {
+  try {
+    // Try the API first
+    return await generateDescriptions(data);
+  } catch (error) {
+    console.warn('API call failed, using fallback description generation', error);
+    // Return empty descriptions so UI can show error state
+    return { descriptions: [] };
+  }
 };

@@ -12,58 +12,151 @@ const SchemaEditor = ({ schema }) => {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [schemaJson, setSchemaJson] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0); // Add refresh key for forcing re-render
  
-useEffect(() => {
-  const loadSchemaData = async () => {
-    if (!schema) return;
-    
-    setLoading(true);
-    try {
-      // Fetch schema JSON
-      const json = await fetchSchemaJson(schema.id);
-      setSchemaJson(json);
+  useEffect(() => {
+    const loadSchemaData = async () => {
+      if (!schema) return;
       
-      // Convert tables object to array
-      const tablesList = Object.entries(json.tables || {}).map(([name, tableData]) => {
-        // Handle columns array with correct field mapping
-        const columnsArray = (tableData.columns || []).map((col, index) => ({
-          id: `${name}-${col.name || index}`,
-          name: col.name || `column_${index}`,
-          type: col.type || col.kdb_type || 'symbol',
-          description: col.column_desc || '',
-          required: col.required || false,
-          key: col.key || false,
-          kdb_type: col.kdb_type || null,
-          references: col.references || null
-        }));
+      setLoading(true);
+      try {
+        // Fetch schema JSON
+        const json = await fetchSchemaJson(schema.id);
+        setSchemaJson(json);
         
-        return {
-          id: name,
-          name: name,
-          description: tableData.description || '',
-          columns: columnsArray,
-          examples: tableData.examples || [],
-          kdb_table_name: tableData.kdb_table_name || name
-        };
-      });
-      
-      setTables(tablesList);
-      
-      // Select first table if available
-      if (tablesList.length > 0 && !selectedTable) {
-        setSelectedTable(tablesList[0]);
+        // Extract tables from the schema JSON in spot.json format
+        let tablesList = [];
+        
+        // Check if we have a nested structure (like in spot.json)
+        if (json.group && json.schemas) {
+          // Handle the spot.json format
+          const schemas = json.schemas || [];
+          schemas.forEach(schemaItem => {
+            if (schemaItem.schema && Array.isArray(schemaItem.schema)) {
+              schemaItem.schema.forEach(schemaData => {
+                if (schemaData.tables && Array.isArray(schemaData.tables)) {
+                  schemaData.tables.forEach(tableObj => {
+                    const tableName = tableObj.kdb_table_name || "unknown";
+                    
+                    // Convert columns to our expected format
+                    const columnsArray = (tableObj.columns || []).map((col, index) => ({
+                      id: `${tableName}-${col.name || index}`,
+                      name: col.name || `column_${index}`,
+                      type: col.type || col.kdb_type || 'symbol',
+                      description: col.column_desc || col.description || '',
+                      required: col.required || false,
+                      key: col.key || false,
+                      kdb_type: col.kdb_type || null,
+                      references: col.references || null
+                    }));
+                    
+                    tablesList.push({
+                      id: tableName,
+                      name: tableName,
+                      description: tableObj.description || '',
+                      columns: columnsArray,
+                      examples: tableObj.examples || [],
+                      kdb_table_name: tableName,
+                      // Store a reference to the original object to update it correctly
+                      _originalRef: tableObj
+                    });
+                  });
+                }
+              });
+            }
+          });
+        }
+        
+        // If we didn't find any tables in the nested format, fall back to standard format
+        if (tablesList.length === 0 && json.tables) {
+          if (Array.isArray(json.tables)) {
+            // Tables are in array format
+            json.tables.forEach(tableObj => {
+              const tableName = tableObj.kdb_table_name || tableObj.name || "unknown";
+              
+              // Convert columns to our expected format
+              const columnsArray = (tableObj.columns || []).map((col, index) => ({
+                id: `${tableName}-${col.name || index}`,
+                name: col.name || `column_${index}`,
+                type: col.type || col.kdb_type || 'symbol',
+                description: col.column_desc || col.description || '',
+                required: col.required || false,
+                key: col.key || false,
+                kdb_type: col.kdb_type || null,
+                references: col.references || null
+              }));
+              
+              tablesList.push({
+                id: tableName,
+                name: tableName,
+                description: tableObj.description || '',
+                columns: columnsArray,
+                examples: tableObj.examples || [],
+                kdb_table_name: tableName,
+                // Store a reference to the original object to update it correctly
+                _originalRef: tableObj
+              });
+            });
+          } else {
+            // Tables are in object format (key-value pairs)
+            Object.entries(json.tables).forEach(([tableName, tableData]) => {
+              // Handle columns array or object with correct field mapping
+              let columnsArray = [];
+              
+              if (Array.isArray(tableData.columns)) {
+                columnsArray = tableData.columns.map((col, index) => ({
+                  id: `${tableName}-${col.name || index}`,
+                  name: col.name || `column_${index}`,
+                  type: col.type || col.kdb_type || 'symbol',
+                  description: col.column_desc || col.description || '',
+                  required: col.required || false,
+                  key: col.key || false,
+                  kdb_type: col.kdb_type || null,
+                  references: col.references || null
+                }));
+              } else if (tableData.columns && typeof tableData.columns === 'object') {
+                // Convert column object to array
+                columnsArray = Object.entries(tableData.columns).map(([colName, colData]) => ({
+                  id: `${tableName}-${colName}`,
+                  name: colName,
+                  type: colData.type || colData.kdb_type || 'symbol',
+                  description: colData.description || '',
+                  required: colData.required || false,
+                  key: colData.key || false
+                }));
+              }
+              
+              tablesList.push({
+                id: tableName,
+                name: tableName,
+                description: tableData.description || '',
+                columns: columnsArray,
+                examples: tableData.examples || [],
+                kdb_table_name: tableData.kdb_table_name || tableName,
+                // Store a reference to the original object
+                _originalRef: tableData
+              });
+            });
+          }
+        }
+        
+        setTables(tablesList);
+        
+        // Select first table if available
+        if (tablesList.length > 0 && !selectedTable) {
+          setSelectedTable(tablesList[0]);
+        }
+      } catch (err) {
+        setError(err.message || 'Failed to load schema data');
+        console.error('Error loading schema data:', err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      setError(err.message || 'Failed to load schema data');
-      console.error('Error loading schema data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  loadSchemaData();
-}, [schema]);
-  
+    };
+    
+    loadSchemaData();
+  }, [schema, refreshKey]); // Add refreshKey to dependencies
+
   const handleTableSelect = (table) => {
     setSelectedTable(table);
   };
@@ -71,24 +164,67 @@ useEffect(() => {
   const handleAddTable = () => {
     // Create a new table with default values
     const newTableName = `new_table_${Date.now()}`;
-    const newTable = {
-      id: newTableName,
-      name: newTableName,
+    
+    // Create new table object in the same format as spot.json
+    const newTableObj = {
+      kdb_table_name: newTableName,
       description: 'New table description',
       columns: []
     };
     
-    // Add to tables list
+    // Add to tables list for UI
+    const newTable = {
+      id: newTableName,
+      name: newTableName,
+      description: 'New table description',
+      columns: [],
+      examples: [],
+      kdb_table_name: newTableName,
+      _originalRef: newTableObj  // Reference to the original object
+    };
+    
     const updatedTables = [...tables, newTable];
     setTables(updatedTables);
     
-    // Update schemaJson
+    // Update schemaJson in the same format
     const updatedJson = { ...schemaJson };
-    updatedJson.tables = updatedJson.tables || {};
-    updatedJson.tables[newTableName] = {
-      description: 'New table description',
-      columns: {}
-    };
+    
+    // Check if we have the spot.json format
+    if (updatedJson.group && updatedJson.schemas && updatedJson.schemas.length > 0) {
+      // Find the first schema item
+      if (updatedJson.schemas[0].schema && updatedJson.schemas[0].schema.length > 0) {
+        // Add the table to the first schema
+        if (updatedJson.schemas[0].schema[0].tables) {
+          if (Array.isArray(updatedJson.schemas[0].schema[0].tables)) {
+            updatedJson.schemas[0].schema[0].tables.push(newTableObj);
+          }
+        } else {
+          // Initialize tables array if it doesn't exist
+          updatedJson.schemas[0].schema[0].tables = [newTableObj];
+        }
+      }
+    } else {
+      // Simpler format
+      if (!updatedJson.tables) {
+        updatedJson.tables = [];
+      }
+      
+      if (Array.isArray(updatedJson.tables)) {
+        updatedJson.tables.push(newTableObj);
+      } else {
+        // Convert to array format if it's an object
+        const tablesArray = [];
+        Object.entries(updatedJson.tables).forEach(([tableName, tableData]) => {
+          tablesArray.push({
+            kdb_table_name: tableName,
+            ...tableData
+          });
+        });
+        tablesArray.push(newTableObj);
+        updatedJson.tables = tablesArray;
+      }
+    }
+    
     setSchemaJson(updatedJson);
     
     // Select the new table
@@ -104,53 +240,46 @@ useEffect(() => {
     const oldTableName = tables[tableIndex].name;
     const isTableRenamed = oldTableName !== updatedTable.name;
     
+    // Get the reference to the original table object
+    const originalRef = tables[tableIndex]._originalRef;
+    if (!originalRef) {
+      console.error("Original table reference not found");
+      return;
+    }
+    
+    // Update the original reference directly
+    originalRef.kdb_table_name = updatedTable.name;
+    originalRef.description = updatedTable.description;
+    
+    // Update columns in the original format
+    originalRef.columns = updatedTable.columns.map(column => ({
+      name: column.name,
+      kdb_type: column.type,  // Use type as kdb_type
+      type: column.type,
+      column_desc: column.description,
+      required: column.required,
+      key: column.key,
+      references: column.references
+    }));
+    
     // Update tables array
     const updatedTables = [...tables];
-    updatedTables[tableIndex] = updatedTable;
+    updatedTables[tableIndex] = {
+      ...updatedTable,
+      _originalRef: originalRef  // Keep reference to original
+    };
     setTables(updatedTables);
     
     // Update selectedTable if it's the one being updated
     if (selectedTable?.id === updatedTable.id) {
-      setSelectedTable(updatedTable);
+      setSelectedTable({
+        ...updatedTable,
+        _originalRef: originalRef
+      });
     }
     
-    // Update schemaJson
-    const updatedJson = { ...schemaJson };
-    updatedJson.tables = updatedJson.tables || {};
-    
-    if (isTableRenamed) {
-      // Create table with new name
-      updatedJson.tables[updatedTable.name] = {
-        description: updatedTable.description,
-        columns: {}
-      };
-      
-      // Copy columns from old table
-      const oldTable = schemaJson.tables[oldTableName] || { columns: {} };
-      updatedJson.tables[updatedTable.name].columns = { ...oldTable.columns };
-      
-      // Delete old table
-      delete updatedJson.tables[oldTableName];
-    } else {
-      // Just update description
-      updatedJson.tables[updatedTable.name] = {
-        ...updatedJson.tables[updatedTable.name],
-        description: updatedTable.description
-      };
-    }
-    
-    // Update columns
-    updatedJson.tables[updatedTable.name].columns = {};
-    updatedTable.columns.forEach(column => {
-      updatedJson.tables[updatedTable.name].columns[column.name] = {
-        type: column.type,
-        description: column.description,
-        required: column.required,
-        key: column.key
-      };
-    });
-    
-    setSchemaJson(updatedJson);
+    // No need to separately update schemaJson since we've updated the
+    // referenced object directly, which is part of the schemaJson structure
   };
   
   const handleSaveSchema = async (createVersion = false) => {
@@ -167,7 +296,10 @@ useEffect(() => {
         createVersion ? `Updated schema on ${new Date().toLocaleDateString()}` : ''
       );
       
-      // Show success message (could implement a toast notification here)
+      // Force reload by incrementing refresh key
+      setRefreshKey(prevKey => prevKey + 1);
+      
+      // Show success message
       console.log('Schema saved successfully' + (createVersion ? ' as new version' : ''));
     } catch (err) {
       setError(err.message || 'Failed to save schema');
@@ -249,6 +381,8 @@ useEffect(() => {
             <TableEditor 
               table={selectedTable}
               onUpdate={handleTableUpdate}
+              tableName={selectedTable.name}
+              allTables={tables}
             />
           ) : (
             <div className="no-table-selected">
