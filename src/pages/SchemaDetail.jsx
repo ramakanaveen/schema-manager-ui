@@ -6,6 +6,7 @@ import AppHeader from '../components/layout/AppHeader';
 import SchemaEditor from '../components/SchemaManager/SchemaEditor';
 import JSONViewer from '../components/SchemaManager/JSONViewer';
 import VersionHistory from '../components/SchemaManager/VersionHistory';
+import { SaveIcon, RotateCwIcon, AlertCircleIcon } from 'lucide-react';
 import './SchemaDetail.css';
 
 const SchemaDetail = () => {
@@ -16,7 +17,8 @@ const SchemaDetail = () => {
   const [schemaJson, setSchemaJson] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isJsonEdited, setIsJsonEdited] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
   // Get the active tab from URL query param or default to 'tables'
   const searchParams = new URLSearchParams(location.search);
@@ -34,6 +36,7 @@ const SchemaDetail = () => {
         // Load schema JSON
         const jsonData = await fetchSchemaJson(schemaId);
         setSchemaJson(jsonData);
+        setHasUnsavedChanges(false);
       } catch (err) {
         setError(err.message || 'Failed to load schema');
         console.error('Error loading schema:', err);
@@ -53,21 +56,32 @@ const SchemaDetail = () => {
     navigate(`/schema-manager/schema/${schemaId}?tab=${tab}`, { replace: true });
   };
   
-  // Handle updates from SchemaEditor
+  // Handle updates from SchemaEditor (table editing)
   const handleSchemaUpdate = (updatedJson) => {
+    console.log('Schema updated from table editor:', updatedJson);
     setSchemaJson(updatedJson);
-    setIsJsonEdited(true);
+    setHasUnsavedChanges(true);
   };
   
-  // Handle updates from JSONViewer (if we add JSON editing capability)
+  // Handle updates from JSONViewer (JSON editing)
   const handleJsonUpdate = (updatedJson) => {
+    console.log('Schema updated from JSON editor:', updatedJson);
     setSchemaJson(updatedJson);
-    setIsJsonEdited(true);
+    setHasUnsavedChanges(true);
+  };
+  
+  // Handle save completion from JSONViewer - this clears the unsaved changes indicator
+  const handleJsonSaveComplete = () => {
+    console.log('JSON save completed, clearing unsaved changes flag');
+    setHasUnsavedChanges(false);
   };
   
   // Handle saving changes
   const handleSaveChanges = async (createVersion = false) => {
     if (!schemaId || !schemaJson) return;
+    
+    setSaving(true);
+    setError(null);
     
     try {
       await updateSchemaJson(
@@ -77,16 +91,59 @@ const SchemaDetail = () => {
         createVersion ? `Updated schema on ${new Date().toLocaleDateString()}` : ''
       );
       
-      setIsJsonEdited(false);
-      // Refresh data after save if needed
-      // loadSchemaData();
+      setHasUnsavedChanges(false);
+      
+      // Show success message (you could add a toast notification here)
+      console.log('Schema saved successfully' + (createVersion ? ' as new version' : ''));
+      
+      // Optionally refresh the schema metadata if it changed
+      if (createVersion) {
+        const refreshedSchema = await fetchSchema(schemaId);
+        setSchema(refreshedSchema);
+      }
     } catch (err) {
       setError(err.message || 'Failed to save schema');
       console.error('Error saving schema:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+  
+  // Handle refresh/reload
+  const handleRefresh = async () => {
+    if (hasUnsavedChanges) {
+      const confirmRefresh = window.confirm(
+        'You have unsaved changes. Refreshing will lose these changes. Continue?'
+      );
+      if (!confirmRefresh) return;
+    }
+    
+    setLoading(true);
+    try {
+      const [schemaData, jsonData] = await Promise.all([
+        fetchSchema(schemaId),
+        fetchSchemaJson(schemaId)
+      ]);
+      
+      setSchema(schemaData);
+      setSchemaJson(jsonData);
+      setHasUnsavedChanges(false);
+      setError(null);
+    } catch (err) {
+      setError(err.message || 'Failed to refresh schema');
+      console.error('Error refreshing schema:', err);
+    } finally {
+      setLoading(false);
     }
   };
   
   const handleBack = () => {
+    if (hasUnsavedChanges) {
+      const confirmLeave = window.confirm(
+        'You have unsaved changes. Leaving will lose these changes. Continue?'
+      );
+      if (!confirmLeave) return;
+    }
     navigate('/schema-manager');
   };
   
@@ -94,16 +151,25 @@ const SchemaDetail = () => {
     return (
       <div className="schema-detail-page">
         <AppHeader title="Schema Editor" />
-        <div className="loading-state">Loading schema...</div>
+        <div className="loading-state">
+          <RotateCwIcon size={32} className="spin" />
+          <p>Loading schema...</p>
+        </div>
       </div>
     );
   }
   
-  if (error) {
+  if (error && !schema) {
     return (
       <div className="schema-detail-page">
         <AppHeader title="Schema Editor" />
-        <div className="error-state">Error: {error}</div>
+        <div className="error-state">
+          <AlertCircleIcon size={32} />
+          <p>Error: {error}</p>
+          <button className="btn btn-primary" onClick={handleRefresh}>
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
@@ -112,7 +178,13 @@ const SchemaDetail = () => {
     return (
       <div className="schema-detail-page">
         <AppHeader title="Schema Editor" />
-        <div className="error-state">Schema not found</div>
+        <div className="error-state">
+          <AlertCircleIcon size={32} />
+          <p>Schema not found</p>
+          <button className="btn btn-secondary" onClick={handleBack}>
+            Go Back
+          </button>
+        </div>
       </div>
     );
   }
@@ -120,35 +192,72 @@ const SchemaDetail = () => {
   return (
     <div className="schema-detail-page">
       <AppHeader title={`Schema: ${schema.name}`} />
+      
       <div className="schema-detail-content">
         <div className="schema-detail-header">
           <button className="btn btn-secondary" onClick={handleBack}>
             ← Back
           </button>
           <h1>{schema.name}</h1>
-          <div className="schema-status">
-            {schema.status === 'active' && <span className="status-badge active">✓ Active</span>}
-            {schema.status === 'draft' && <span className="status-badge draft">✏️ Draft</span>}
-            {schema.status === 'deprecated' && <span className="status-badge deprecated">⏱️ Deprecated</span>}
-          </div>
           
-          {isJsonEdited && (
+          <div className="schema-header-right">
+            <div className="schema-status">
+              {schema.status === 'active' && <span className="status-badge active">✓ Active</span>}
+              {schema.status === 'draft' && <span className="status-badge draft">✏️ Draft</span>}
+              {schema.status === 'deprecated' && <span className="status-badge deprecated">⏱️ Deprecated</span>}
+            </div>
+            
+            {hasUnsavedChanges && (
+              <div className="unsaved-changes-indicator">
+                <AlertCircleIcon size={16} />
+                <span>Unsaved changes</span>
+              </div>
+            )}
+            
             <div className="schema-actions">
               <button 
-                className="btn btn-primary"
-                onClick={() => handleSaveChanges(false)}
-              >
-                Save Changes
-              </button>
-              <button 
                 className="btn btn-secondary"
-                onClick={() => handleSaveChanges(true)}
+                onClick={handleRefresh}
+                disabled={saving}
               >
-                Save as New Version
+                <RotateCwIcon size={16} className={loading ? 'spin' : ''} />
+                <span>Refresh</span>
+              </button>
+              
+              <button 
+                className="btn btn-success"
+                onClick={() => handleSaveChanges(false)}
+                disabled={saving || !hasUnsavedChanges}
+              >
+                <SaveIcon size={16} />
+                <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+              </button>
+              
+              <button 
+                className="btn btn-primary"
+                onClick={() => handleSaveChanges(true)}
+                disabled={saving || !hasUnsavedChanges}
+              >
+                <SaveIcon size={16} />
+                <span>Save as New Version</span>
               </button>
             </div>
-          )}
+          </div>
         </div>
+        
+        {error && (
+          <div className="error-banner">
+            <AlertCircleIcon size={16} />
+            <span>{error}</span>
+            <button 
+              className="btn-close" 
+              onClick={() => setError(null)}
+              title="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        )}
         
         <div className="schema-tabs">
           <button 
@@ -185,6 +294,7 @@ const SchemaDetail = () => {
               schemaId={schemaId} 
               schemaJson={schemaJson}
               onUpdate={handleJsonUpdate}
+              onSaveComplete={handleJsonSaveComplete}
             />
           )}
           
